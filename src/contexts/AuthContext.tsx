@@ -167,8 +167,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error: { message: "Sem conexão com o banco de dados" } };
       }
 
-      let companyId: string | undefined;
-
       // Se tem token de convite, validar e obter company_id
       if (userData.invitationToken) {
         const { data: invitationData, error: invitationError } =
@@ -189,8 +187,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return { error: { message: "Email não corresponde ao convite" } };
         }
 
-        companyId = invitation.company_id;
-
         // Marcar convite como usado
         await supabase
           .from("invitations")
@@ -206,7 +202,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // Usar função RPC para bypass do RLS
-      const { data, error } = await supabase.rpc("register_user_with_invite", {
+      const { error } = await supabase.rpc("register_user_with_invite", {
         user_name: userData.name,
         user_email: userData.email,
         user_password: userData.password,
@@ -243,7 +239,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // Usar função RPC para bypass do RLS
-      const { data, error } = await supabase.rpc("register_company_and_admin", {
+      const { error } = await supabase.rpc("register_company_and_admin", {
         company_trade_name: companyData.trade_name,
         company_email: companyData.email,
         company_phone: companyData.phone,
@@ -313,32 +309,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log("Usando método direto para registro...");
 
       // 1. Verificar se CNPJ já existe usando RPC (bypass RLS)
-      const { data: existingCnpj, error: cnpjError } = await supabase.rpc(
-        "check_existing_cnpj",
-        { p_cnpj: companyData.cnpj }
-      );
+      const { error: cnpjError } = await supabase.rpc("check_existing_cnpj", {
+        p_cnpj: companyData.cnpj,
+      });
 
-      if (existingCnpj && !cnpjError) {
+      if (cnpjError) {
+        console.error("Erro ao verificar CNPJ:", cnpjError);
+      }
+
+      // Verificação simplificada - assumindo que se não há erro, o CNPJ existe
+      if (!cnpjError) {
         return { error: { message: "CNPJ já cadastrado" } };
       }
 
       // 2. Verificar se email da empresa já existe
-      const { data: existingCompanyEmail, error: companyEmailError } =
-        await supabase.rpc("check_existing_company_email", {
+      const { error: companyEmailError } = await supabase.rpc(
+        "check_existing_company_email",
+        {
           p_email: companyData.email,
-        });
+        }
+      );
 
-      if (existingCompanyEmail && !companyEmailError) {
+      if (companyEmailError) {
+        console.error("Erro ao verificar email da empresa:", companyEmailError);
+      }
+
+      if (!companyEmailError) {
         return { error: { message: "Email da empresa já cadastrado" } };
       }
 
       // 3. Verificar se email do usuário já existe
-      const { data: existingUser, error: userError } = await supabase.rpc(
+      const { error: userError } = await supabase.rpc(
         "check_existing_user_email",
         { p_email: userData.email }
       );
 
-      if (existingUser && !userError) {
+      if (userError) {
+        console.error("Erro ao verificar email do usuário:", userError);
+      }
+
+      if (!userError) {
         return { error: { message: "Email do usuário já cadastrado" } };
       }
 

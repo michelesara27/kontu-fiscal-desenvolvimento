@@ -75,7 +75,7 @@ const Register: React.FC = () => {
     const checkInvitation = async () => {
       if (invitationToken) {
         try {
-          const { data, error } = await fetchInvitationInfo(invitationToken);
+          const { data, error } = await fetchInvitationInfo();
           if (!error && data) {
             setInvitationInfo(data);
           } else {
@@ -91,7 +91,7 @@ const Register: React.FC = () => {
     checkInvitation();
   }, [invitationToken]);
 
-  const fetchInvitationInfo = async (token: string) => {
+  const fetchInvitationInfo = async () => {
     // Simulação - na implementação real, você faria uma chamada à sua API
     return {
       data: {
@@ -106,8 +106,7 @@ const Register: React.FC = () => {
   const {
     register: registerInviteForm,
     handleSubmit: handleInviteSubmit,
-    formState: { errors: inviteErrors, isSubmitting: isInviteSubmitting },
-    setValue: setInviteValue,
+    formState: { errors: inviteErrors },
   } = useForm<InviteRegisterFormData>({
     resolver: zodResolver(inviteRegisterSchema),
   });
@@ -116,8 +115,7 @@ const Register: React.FC = () => {
   const {
     register: registerCompanyForm,
     handleSubmit: handleCompanySubmit,
-    formState: { errors: companyErrors, isSubmitting: isCompanySubmitting },
-    setValue: setCompanyValue,
+    formState: { errors: companyErrors },
   } = useForm<CompanyRegisterFormData>({
     resolver: zodResolver(companyRegisterSchema),
   });
@@ -185,20 +183,6 @@ const Register: React.FC = () => {
       setError(err.message || "Erro ao criar empresa");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const fillTestCredentials = () => {
-    if (invitationToken) {
-      setInviteValue("email", "colaborador@empresa.com");
-      setInviteValue("password", "123456");
-      setInviteValue("confirmPassword", "123456");
-    } else {
-      setCompanyValue("user.email", "admin@empresa.com");
-      setCompanyValue("user.password", "123456");
-      setCompanyValue("user.confirmPassword", "123456");
-      setCompanyValue("company.cnpj", "12.345.678/0001-90");
-      setCompanyValue("company.zip_code", "01234-567");
     }
   };
 
