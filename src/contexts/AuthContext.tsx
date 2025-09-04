@@ -170,7 +170,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Se tem token de convite, validar e obter company_id
       if (userData.invitationToken) {
         const { data: invitationData, error: invitationError } =
-          await supabase.rpc("validate_invitation", {
+          await supabase.rpc("validate_invitation_simple", {
             p_token: userData.invitationToken,
           });
 
@@ -183,9 +183,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return { error: { message: "Convite inválido ou expirado" } };
         }
 
-        if (invitation.invitation_email !== userData.email) {
-          return { error: { message: "Email não corresponde ao convite" } };
-        }
+        //if (invitation.invitation_email !== userData.email) {
+        //  return { error: { message: "Email não corresponde ao convite" } };
+        //}
 
         // Marcar convite como usado
         await supabase

@@ -21,13 +21,22 @@ const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const navigation = [
+  // Navigation items - base para todos os usuários
+  const baseNavigation = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "Clientes", href: "/clientes", icon: Users },
     { name: "Pendências", href: "/pendencias", icon: AlertCircle },
     { name: "Lembretes", href: "/lembretes", icon: Bell },
+  ];
+
+  // Adicionar Configurações apenas para administradores
+  const adminNavigation = [
+    ...baseNavigation,
     { name: "Configurações", href: "/configuracoes", icon: Settings },
   ];
+
+  // Definir navigation baseada no role do usuário
+  const navigation = user?.role === "admin" ? adminNavigation : baseNavigation;
 
   const handleLogout = async () => {
     await logout();
@@ -68,7 +77,10 @@ const Header: React.FC = () => {
 
         {/* User Menu */}
         <div className="user-menu">
-          <span className="user-email">ID: {user?.id}</span>
+          <span className="user-email">{user?.email}</span>
+          <span className="user-role">
+            ({user?.role === "admin" ? "Administrador" : "Colaborador"})
+          </span>
           <button onClick={handleLogout} className="logout-btn">
             <LogOut size={18} />
             <span>Sair</span>
@@ -104,6 +116,9 @@ const Header: React.FC = () => {
           })}
           <div className="mobile-user-menu">
             <span>Logado como: {user?.email}</span>
+            <span>
+              Tipo: {user?.role === "admin" ? "Administrador" : "Colaborador"}
+            </span>
             <button onClick={handleLogout} className="mobile-logout-btn">
               <LogOut size={20} />
               Sair

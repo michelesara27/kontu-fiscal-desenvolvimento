@@ -8,6 +8,7 @@ import {
   Copy,
   Check,
   UserPlus,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
@@ -28,6 +29,9 @@ const Settings: React.FC = () => {
     null
   );
   const [inviteEmail, setInviteEmail] = useState<string>("");
+  const [inviteType, setInviteType] = useState<"universal" | "specific">(
+    "universal"
+  );
 
   const {
     register,
@@ -47,34 +51,55 @@ const Settings: React.FC = () => {
     setMessage(null);
 
     try {
-      // Chamar a função RPC no Supabase para criar o convite
-      const { data, error } = await supabase.rpc("create_invitation", {
-        p_email: inviteEmail || "", // Usar o email do campo ou string vazia
-        p_company_id: user.company_id,
-        p_created_by: user.id,
-      });
+      let result;
 
-      if (error) {
-        console.error("Erro ao criar convite:", error);
+      if (inviteType === "specific") {
+        if (!inviteEmail) {
+          setMessage({
+            type: "error",
+            text: "Email é obrigatório para convite específico",
+          });
+          setIsGenerating(false);
+          return;
+        }
+
+        // Convite específico com email
+        result = await supabase.rpc("create_invitation", {
+          p_email: inviteEmail,
+          p_company_id: user.company_id,
+          p_created_by: user.id,
+        });
+      } else {
+        // Convite universal
+        result = await supabase.rpc("create_universal_invitation", {
+          p_company_id: user.company_id,
+          p_created_by: user.id,
+        });
+      }
+
+      if (result.error) {
+        console.error("Erro ao criar convite:", result.error);
         setMessage({
           type: "error",
-          text: "Erro ao gerar link de convite: " + error.message,
+          text: "Erro ao gerar link de convite: " + result.error.message,
         });
+        setIsGenerating(false);
         return;
       }
 
       // O token retornado pela função
-      const token = data;
+      const token = result.data;
       const link = `${window.location.origin}/registro?invite=${token}`;
 
       setInviteLink(link);
       setMessage({
         type: "success",
-        text: inviteEmail
-          ? `Link de convite gerado com sucesso para ${inviteEmail}!`
-          : "Link de convite gerado com sucesso!",
+        text:
+          inviteType === "specific"
+            ? `Link de convite gerado com sucesso para ${inviteEmail}!`
+            : "Link de convite universal gerado com sucesso! Qualquer pessoa pode se registrar com este link.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro:", error);
       setMessage({ type: "error", text: "Erro inesperado ao gerar convite" });
     } finally {
@@ -174,23 +199,69 @@ const Settings: React.FC = () => {
             <p>Convide novos usuários para sua empresa:</p>
 
             <div className="form-group">
-              <label htmlFor="inviteEmail">Email do Convidado (opcional)</label>
-              <input
-                type="email"
-                id="inviteEmail"
-                placeholder="email@exemplo.com"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-              />
-              <p className="input-note">
-                Deixe em branco para gerar um link de convite universal
-              </p>
+              <label>Tipo de Convite</label>
+              <div className="invite-type-selector">
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    value="universal"
+                    checked={inviteType === "universal"}
+                    onChange={(e) =>
+                      setInviteType(e.target.value as "universal" | "specific")
+                    }
+                  />
+                  <span>Convite Universal (Qualquer email)</span>
+                </label>
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    value="specific"
+                    checked={inviteType === "specific"}
+                    onChange={(e) =>
+                      setInviteType(e.target.value as "universal" | "specific")
+                    }
+                  />
+                  <span>Convite Específico</span>
+                </label>
+              </div>
             </div>
+
+            {inviteType === "specific" && (
+              <div className="form-group">
+                <label htmlFor="inviteEmail">
+                  <Mail size={16} />
+                  Email do Convidado *
+                </label>
+                <input
+                  type="email"
+                  id="inviteEmail"
+                  placeholder="email@exemplo.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  required
+                />
+                <p className="input-note">
+                  O convite só funcionará para este email específico
+                </p>
+              </div>
+            )}
+
+            {inviteType === "universal" && (
+              <div className="info-box">
+                <strong>Convite Universal</strong>
+                <p>
+                  Qualquer pessoa com este link poderá se registrar na sua
+                  empresa.
+                </p>
+              </div>
+            )}
 
             <button
               onClick={generateInviteLink}
               className="btn-primary"
-              disabled={isGenerating}
+              disabled={
+                isGenerating || (inviteType === "specific" && !inviteEmail)
+              }
             >
               <LinkIcon size={18} />
               {isGenerating ? "Gerando..." : "Gerar Link de Convite"}
@@ -217,12 +288,15 @@ const Settings: React.FC = () => {
                   </button>
                 </div>
                 <div className="link-info">
-                  <p className="link-note">⏰ Este link expira em 10 minutos</p>
+                  <p className="link-note">
+                    ⏰ Este link expira em{" "}
+                    {inviteType === "specific" ? "10 minutos" : "24 horas"}
+                  </p>
                   <p className="link-note">
                     👥 Acesso:{" "}
-                    {inviteEmail
-                      ? "Convidado específico"
-                      : "Qualquer pessoa com o link"}
+                    {inviteType === "universal"
+                      ? "Qualquer pessoa com o link"
+                      : `Apenas para: ${inviteEmail}`}
                   </p>
                 </div>
               </div>
