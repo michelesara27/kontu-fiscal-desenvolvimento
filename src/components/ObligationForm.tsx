@@ -97,14 +97,22 @@ const ObligationForm: React.FC<ObligationFormProps> = ({
         },
       ]);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro detalhado do Supabase:", error);
+        throw new Error(error.message || "Erro desconhecido do banco de dados");
+      }
 
       onObligationAdded();
       onClose();
       reset();
-    } catch (error) {
-      console.error("Erro ao salvar obrigação:", error);
-      alert("Erro ao salvar obrigação fiscal");
+      alert("Obrigação fiscal salva com sucesso!");
+    } catch (error: any) {
+      console.error("Erro completo ao salvar obrigação:", error);
+      alert(
+        `Erro ao salvar obrigação fiscal: ${
+          error.message || "Verifique o console para detalhes"
+        }`
+      );
     } finally {
       setIsLoading(false);
     }
