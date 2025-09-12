@@ -84,33 +84,27 @@ const ObligationForm: React.FC<ObligationFormProps> = ({
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.from("pendencies").insert([
-        {
-          title: data.title,
-          due_date: data.due_date,
-          periodicity: data.periodicity,
-          client_id: data.client_id,
-          company_id: user.company_id,
-          created_by: user.id,
-          status: "pending",
-          priority: "medium",
-        },
-      ]);
+      // Usando a função RPC
+      const { error } = await supabase.rpc("create_obligation", {
+        p_title: data.title,
+        p_due_date: data.due_date,
+        p_periodicity: data.periodicity,
+        p_client_id: data.client_id,
+        p_company_id: user.company_id,
+        p_created_by: user.id,
+      });
 
-      if (error) {
-        console.error("Erro detalhado do Supabase:", error);
-        throw new Error(error.message || "Erro desconhecido do banco de dados");
-      }
+      if (error) throw error;
 
       onObligationAdded();
       onClose();
       reset();
       alert("Obrigação fiscal salva com sucesso!");
     } catch (error: any) {
-      console.error("Erro completo ao salvar obrigação:", error);
+      console.error("Erro ao salvar obrigação:", error);
       alert(
         `Erro ao salvar obrigação fiscal: ${
-          error.message || "Verifique o console para detalhes"
+          error.message || "Verifique o console"
         }`
       );
     } finally {
