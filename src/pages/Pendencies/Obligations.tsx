@@ -15,20 +15,34 @@ const Obligations: React.FC = () => {
 
   // Buscar obrigações
   const fetchObligations = async () => {
-    if (!user?.company_id) return;
+    if (!user?.company_id) {
+      console.error(
+        "ID da empresa não encontrado no usuário. O usuário está logado?",
+        user
+      );
+      return;
+    }
     setLoading(true);
     try {
+      console.log(`Buscando obrigações para company_id: ${user.company_id}`);
+
+      // QUERY SIMPLIFICADA - REMOVE O JOIN INICIALMENTE
       const { data, error } = await supabase
         .from("pendencies")
-        .select(`*, clients(name)`)
+        .select("*") // Seleciona tudo da tabela pendencies
         .eq("company_id", user.company_id)
-        .order("due_date", { ascending: true }); // Ordena por data de vencimento
+        .order("due_date", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro detalhado do Supabase:", error);
+        throw error;
+      }
+
+      console.log("Dados recebidos do Supabase (apenas pendências):", data);
       setObligations(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao buscar obrigações:", error);
-      alert("Erro ao carregar obrigações fiscais");
+      alert(`Falha ao carregar a lista: ${error.message}`);
     } finally {
       setLoading(false);
     }
