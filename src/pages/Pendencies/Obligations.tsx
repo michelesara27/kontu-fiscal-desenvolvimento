@@ -13,60 +13,36 @@ const Obligations: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // Buscar obrigações - DEBUG AVANÇADO
+  // Buscar obrigações
   const fetchObligations = async () => {
+    if (!user?.company_id) {
+      console.error(
+        "ID da empresa não encontrado no usuário. O usuário está logado?",
+        user
+      );
+      return;
+    }
     setLoading(true);
     try {
-      console.log("🔍=== INÍCIO DO DEBUG ===🔍");
-      console.log("Usuário logado:", user);
+      console.log(`Buscando obrigações para company_id: ${user.company_id}`);
 
-      // 1. Busca TUDO da tabela, sem nenhum filtro
-      console.log("1. Buscando TODOS os registros da tabela 'pendencies'...");
-      const { data: allData, error: allError } = await supabase
+      // QUERY SIMPLIFICADA - REMOVE O JOIN INICIALMENTE
+      const { data, error } = await supabase
         .from("pendencies")
-        .select("*");
+        .select("*") // Seleciona tudo da tabela pendencies
+        .eq("company_id", user.company_id)
+        .order("due_date", { ascending: true });
 
-      if (allError) {
-        console.error("❌ Erro ao buscar TODOS os dados:", allError);
-      } else {
-        console.log("✅ Todos os registros encontrados:", allData);
-        console.log("   Número total de registros:", allData.length);
-        // Mostra o company_id de cada registro
-        allData.forEach((item, index) => {
-          console.log(
-            `   Registro ${index + 1}: ID=${item.id}, Company_ID=${
-              item.company_id
-            }, Título=${item.title}`
-          );
-        });
+      if (error) {
+        console.error("Erro detalhado do Supabase:", error);
+        throw error;
       }
 
-      // 2. Busca apenas os registros do company_id do usuário
-      if (user?.company_id) {
-        console.log(
-          `2. Buscando registros para company_id: ${user.company_id}...`
-        );
-        const { data, error } = await supabase
-          .from("pendencies")
-          .select("*")
-          .eq("company_id", user.company_id)
-          .order("due_date", { ascending: true });
-
-        if (error) {
-          console.error("❌ Erro na query filtrada:", error);
-        } else {
-          console.log(`✅ Registros para company_id ${user.company_id}:`, data);
-          console.log("   Número de registros encontrados:", data.length);
-        }
-        setObligations(data || []);
-      } else {
-        console.log("⚠️  user.company_id não está definido.");
-        setObligations([]);
-      }
-
-      console.log("🔍=== FIM DO DEBUG ===🔍");
+      console.log("Dados recebidos do Supabase (apenas pendências):", data);
+      setObligations(data || []);
     } catch (error: any) {
-      console.error("💥 Erro em fetchObligations:", error);
+      console.error("Erro ao buscar obrigações:", error);
+      alert(`Falha ao carregar a lista: ${error.message}`);
     } finally {
       setLoading(false);
     }
