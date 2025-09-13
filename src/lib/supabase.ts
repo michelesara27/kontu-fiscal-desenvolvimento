@@ -11,11 +11,16 @@ const DEFAULT_SUPABASE_URL = "https://niiuihggenwtxaupbqhm.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5paXVpaGdnZW53dHhhdXBicWhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4NjAwNTYsImV4cCI6MjA3MjQzNjA1Nn0.eH0V_vcO3SRFwT8n0kG_0akB5rddQVTcZPezYo5BUBY";
 
-const supabaseUrl = DEFAULT_SUPABASE_URL;
-const supabaseAnonKey = DEFAULT_SUPABASE_ANON_KEY;
+// Tenta obter das variáveis de ambiente PRIMEIRO, usa fallback se não existir
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
 
 // Verificação de variáveis de ambiente
-if (!supabaseUrl || !supabaseAnonKey) {
+if (
+  !import.meta.env.VITE_SUPABASE_URL ||
+  !import.meta.env.VITE_SUPABASE_ANON_KEY
+) {
   console.warn("⚠️ Variáveis de ambiente do Supabase não encontradas.");
   console.warn("📝 Crie um arquivo .env com:");
   console.warn("VITE_SUPABASE_URL=sua_url_do_supabase");

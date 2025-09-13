@@ -13,22 +13,60 @@ const Obligations: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  // Buscar obrigações
+  // Buscar obrigações - DEBUG AVANÇADO
   const fetchObligations = async () => {
-    if (!user?.company_id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("pendencies")
-        .select(`*, clients(name)`) // <-- Esta query pode ser o problema
-        .eq("company_id", user.company_id)
-        .order("due_date", { ascending: true });
+      console.log("🔍=== INÍCIO DO DEBUG ===🔍");
+      console.log("Usuário logado:", user);
 
-      if (error) throw error;
-      setObligations(data || []);
-    } catch (error) {
-      console.error("Erro ao buscar obrigações:", error);
-      alert("Erro ao carregar obrigações fiscais"); // Este alerta não apareceu?
+      // 1. Busca TUDO da tabela, sem nenhum filtro
+      console.log("1. Buscando TODOS os registros da tabela 'pendencies'...");
+      const { data: allData, error: allError } = await supabase
+        .from("pendencies")
+        .select("*");
+
+      if (allError) {
+        console.error("❌ Erro ao buscar TODOS os dados:", allError);
+      } else {
+        console.log("✅ Todos os registros encontrados:", allData);
+        console.log("   Número total de registros:", allData.length);
+        // Mostra o company_id de cada registro
+        allData.forEach((item, index) => {
+          console.log(
+            `   Registro ${index + 1}: ID=${item.id}, Company_ID=${
+              item.company_id
+            }, Título=${item.title}`
+          );
+        });
+      }
+
+      // 2. Busca apenas os registros do company_id do usuário
+      if (user?.company_id) {
+        console.log(
+          `2. Buscando registros para company_id: ${user.company_id}...`
+        );
+        const { data, error } = await supabase
+          .from("pendencies")
+          .select("*")
+          .eq("company_id", user.company_id)
+          .order("due_date", { ascending: true });
+
+        if (error) {
+          console.error("❌ Erro na query filtrada:", error);
+        } else {
+          console.log(`✅ Registros para company_id ${user.company_id}:`, data);
+          console.log("   Número de registros encontrados:", data.length);
+        }
+        setObligations(data || []);
+      } else {
+        console.log("⚠️  user.company_id não está definido.");
+        setObligations([]);
+      }
+
+      console.log("🔍=== FIM DO DEBUG ===🔍");
+    } catch (error: any) {
+      console.error("💥 Erro em fetchObligations:", error);
     } finally {
       setLoading(false);
     }
