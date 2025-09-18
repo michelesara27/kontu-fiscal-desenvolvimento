@@ -1,36 +1,70 @@
 // src/pages/Dashboard/Dashboard.tsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  AlertCircle,
-  Clock,
-  CheckCircle,
-  Users,
-  AlertTriangle,
-  Bell,
-} from "lucide-react";
+import { CheckCircle, Users, Bell, AlertTriangle } from "lucide-react";
 import StatCard from "../../components/StatCard";
+import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const [stats, setStats] = useState({
+    totalClientes: 0,
+    lembretesPendentes: 0,
+    taxResolvido: "0%",
+  });
+  const [loading, setLoading] = useState(true);
 
-  // Dados mockados - você vai substituir por dados reais do seu banco
-  const stats = {
-    totalPendencias: 24,
-    totalAtrasadas: 7,
-    taxResolvido: "78%",
-    totalClientes: 42,
-    clientesAtivos: 38,
-    lembretesPendentes: 12,
+  // Buscar dados do dashboard
+  const fetchDashboardData = async () => {
+    if (!user?.company_id) return;
+
+    setLoading(true);
+    try {
+      // Buscar total de clientes
+      const { count: totalClientes, error: clientesError } = await supabase
+        .from("clients")
+        .select("*", { count: "exact" })
+        .eq("company_id", user.company_id)
+        .eq("status", "active");
+
+      if (clientesError) throw clientesError;
+
+      // Buscar lembretes pendentes
+      const { count: lembretesPendentes, error: lembretesError } =
+        await supabase
+          .from("reminders")
+          .select("*", { count: "exact" })
+          .eq("company_id", user.company_id)
+          .eq("status", "pending");
+
+      if (lembretesError) throw lembretesError;
+
+      // Calcular taxa de resolução (mockado para exemplo)
+      const taxResolvido = "78%"; // Você pode implementar cálculo real depois
+
+      setStats({
+        totalClientes: totalClientes || 0,
+        lembretesPendentes: lembretesPendentes || 0,
+        taxResolvido,
+      });
+    } catch (error) {
+      console.error("Erro ao buscar dados do dashboard:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [user?.company_id]);
 
   // Dados recentes mockados
   const recentActivities = [
     {
       id: 1,
-      type: "pendency",
-      description: "Pendência criada para Cliente ABC",
+      type: "reminder",
+      description: "Lembrete criado para Cliente ABC",
       time: "2 min ago",
     },
     {
@@ -54,44 +88,27 @@ const Dashboard: React.FC = () => {
         <p>Resumo do seu negócio hoje</p>
       </header>
 
-      {/* Cards Principais */}
+      {/* Cards Principais Atualizados */}
       <div className="grid-cols-3">
         <StatCard
-          title="Total de Pendências"
-          value={stats.totalPendencias}
-          icon={<AlertCircle size={24} />}
-          trend={{ value: "+2 desde ontem", isPositive: false }}
+          title="Total de Clientes"
+          value={loading ? "-" : stats.totalClientes}
+          icon={<Users size={24} />}
+          trend={{ value: "+2 desde ontem", isPositive: true }}
         />
+
         <StatCard
-          title="Pendências Atrasadas"
-          value={stats.totalAtrasadas}
-          icon={<Clock size={24} />}
+          title="Lembretes Pendentes"
+          value={loading ? "-" : stats.lembretesPendentes}
+          icon={<Bell size={24} />}
           trend={{ value: "Precisa de atenção", isPositive: false }}
         />
+
         <StatCard
           title="Taxa de Resolução"
           value={stats.taxResolvido}
           icon={<CheckCircle size={24} />}
           trend={{ value: "+5% no mês", isPositive: true }}
-        />
-      </div>
-
-      {/* Estatísticas Adicionais */}
-      <div className="grid-cols-3">
-        <StatCard
-          title="Total de Clientes"
-          value={stats.totalClientes}
-          icon={<Users size={24} />}
-        />
-        <StatCard
-          title="Clientes Ativos"
-          value={stats.clientesAtivos}
-          icon={<Users size={24} />}
-        />
-        <StatCard
-          title="Lembretes Pendentes"
-          value={stats.lembretesPendentes}
-          icon={<Bell size={24} />}
         />
       </div>
 
@@ -109,19 +126,21 @@ const Dashboard: React.FC = () => {
             <h3>Gerenciar Clientes</h3>
             <p>Visualize e edite sua base de clientes</p>
           </Link>
-          <Link to="/pendencias" className="action-card">
-            <div className="ac-icon">
-              <AlertTriangle size={20} />
-            </div>
-            <h3>Ver Pendências</h3>
-            <p>Checklist de tarefas pendentes</p>
-          </Link>
+
           <Link to="/lembretes" className="action-card">
             <div className="ac-icon">
               <Bell size={20} />
             </div>
-            <h3>Definir Lembretes</h3>
-            <p>Programe notificações importantes</p>
+            <h3>Ver Lembretes</h3>
+            <p>Checklist de lembretes pendentes</p>
+          </Link>
+
+          <Link to="/pendencias" className="action-card">
+            <div className="ac-icon">
+              <AlertTriangle size={20} />
+            </div>
+            <h3>Ver Obrigações</h3>
+            <p>Obrigações fiscais dos clientes</p>
           </Link>
         </div>
       </section>
@@ -140,11 +159,7 @@ const Dashboard: React.FC = () => {
             <div key={activity.id} className="table-row">
               <span>{activity.description}</span>
               <span className="status-badge pending">
-                {activity.type === "pendency"
-                  ? "Pendência"
-                  : activity.type === "client"
-                  ? "Cliente"
-                  : "Lembrete"}
+                {activity.type === "reminder" ? "Lembrete" : "Cliente"}
               </span>
               <span className="status-badge active">Ativo</span>
               <span>{activity.time}</span>
