@@ -9,7 +9,7 @@ import { useAuth } from "../contexts/AuthContext";
 
 const reminderSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
-  client_id: z.string().min(1, "Selecionar um cliente é obrigatório"),
+  client_id: z.string().optional(), // Tornando opcional para evitar erro
   description: z.string().optional(),
   due_date: z.string().min(1, "Data de vencimento é obrigatória"),
 });
@@ -38,8 +38,12 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<ReminderFormData>({
     resolver: zodResolver(reminderSchema),
+    defaultValues: {
+      client_id: "", // Valor padrão vazio
+    },
   });
 
   React.useEffect(() => {
@@ -66,28 +70,40 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
   React.useEffect(() => {
     if (!isOpen) {
       reset();
+      setValue("client_id", ""); // Resetar para vazio ao fechar
     }
-  }, [isOpen, reset]);
+  }, [isOpen, reset, setValue]);
 
   const onSubmit = async (data: ReminderFormData) => {
     if (!user?.company_id) return;
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.from("reminders").insert([
-        {
-          title: data.title,
-          description: data.description || null,
-          due_date: data.due_date,
-          client_id: data.client_id,
-          company_id: user.company_id,
-          created_by: user.id,
-          status: "pending",
-          priority: "medium",
-        },
-      ]);
+      // Preparar dados para inserção
+      const insertData: any = {
+        title: data.title,
+        description: data.description || null,
+        due_date: data.due_date,
+        company_id: user.company_id,
+        created_by: user.id,
+        status: "pending",
+        priority: "medium",
+      };
 
-      if (error) throw error;
+      // Adicionar client_id apenas se foi selecionado
+      if (data.client_id) {
+        insertData.client_id = data.client_id;
+      }
+
+      const { error } = await supabase
+        .from("reminders")
+        .insert([insertData])
+        .select();
+
+      if (error) {
+        console.error("Erro detalhado do Supabase:", error);
+        throw error;
+      }
 
       onReminderAdded();
       onClose();
@@ -95,7 +111,15 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
       alert("Lembrete criado com sucesso!");
     } catch (error: any) {
       console.error("Erro ao salvar lembrete:", error);
-      alert(`Erro ao salvar lembrete: ${error.message}`);
+
+      // Mensagem de erro mais amigável
+      let errorMessage = "Erro ao salvar lembrete";
+      if (error.message.includes("client_id")) {
+        errorMessage =
+          "Erro ao vincular cliente. Verifique se a coluna client_id existe na tabela reminders.";
+      }
+
+      alert(`${errorMessage}: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -108,7 +132,11 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
       <div className="modal">
         <div className="modal-header">
           <h2>Novo Lembrete</h2>
-          <button onClick={onClose} className="modal-close">
+          <button
+            onClick={onClose}
+            className="modal-close"
+            disabled={isLoading}
+          >
             <X size={20} />
           </button>
         </div>
@@ -135,15 +163,15 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
           <div className="form-group">
             <label htmlFor="client_id">
               <User size={18} />
-              Cliente *
+              Cliente (Opcional)
             </label>
             <select
               {...register("client_id")}
               id="client_id"
               className={errors.client_id ? "error" : ""}
-              disabled={isLoading}
+              disabled={isLoading || clients.length === 0}
             >
-              <option value="">Selecione um cliente</option>
+              <option value="">Selecione um cliente (opcional)</option>
               {clients.map((client) => (
                 <option key={client.id} value={client.id}>
                   {client.name}
@@ -152,6 +180,11 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
             </select>
             {errors.client_id && (
               <span className="error">{errors.client_id.message}</span>
+            )}
+            {clients.length === 0 && (
+              <span className="text-sm text-muted-foreground">
+                Nenhum cliente cadastrado
+              </span>
             )}
           </div>
 
