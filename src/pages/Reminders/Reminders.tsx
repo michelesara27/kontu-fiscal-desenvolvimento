@@ -1,9 +1,10 @@
 // src/pages/Reminders/Reminders.tsx
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Plus, Bell, Clock } from "lucide-react"; // Removido CheckCircle
+import { Plus, Bell, Clock, Eye, Calendar } from "lucide-react";
 import StatCard from "../../components/StatCard";
+import ReminderForm from "../../components/ReminderForm";
 import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface Reminder {
   id: string;
@@ -12,38 +13,65 @@ interface Reminder {
   due_date: string;
   status: "pending" | "completed";
   priority: "low" | "medium" | "high";
+  client_id: string;
+  clients?: {
+    name: string;
+  };
 }
 
 const Reminders: React.FC = () => {
+  const { user } = useAuth();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchReminders();
-  }, []);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const fetchReminders = async () => {
+    if (!user?.company_id) return;
+
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("reminders")
-        .select("*")
+        .select("*, clients(name)")
+        .eq("company_id", user.company_id)
         .order("due_date", { ascending: true });
 
       if (error) throw error;
       setReminders(data || []);
     } catch (error) {
       console.error("Error fetching reminders:", error);
+      alert("Erro ao carregar lembretes");
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchReminders();
+  }, [user?.company_id]);
+
+  const totalReminders = reminders.length;
   const pendingReminders = reminders.filter(
     (r) => r.status === "pending"
   ).length;
-  const highPriority = reminders.filter(
-    (r) => r.priority === "high" && r.status === "pending"
+  const completedReminders = reminders.filter(
+    (r) => r.status === "completed"
   ).length;
+
+  const handleReminderAdded = () => {
+    fetchReminders();
+  };
+
+  const truncateDescription = (description: string, maxLength: number = 50) => {
+    if (!description) return "-";
+    return description.length > maxLength
+      ? description.substring(0, maxLength) + "..."
+      : description;
+  };
+
+  const getStatusBadge = (status: string) => {
+    return status === "completed" ? "Concluído" : "Pendente";
+  };
 
   return (
     <div className="page-container">
@@ -55,7 +83,7 @@ const Reminders: React.FC = () => {
       <div className="grid-cols-3">
         <StatCard
           title="Total de Lembretes"
-          value={reminders.length}
+          value={totalReminders}
           icon={<Bell size={24} />}
         />
         <StatCard
@@ -64,48 +92,66 @@ const Reminders: React.FC = () => {
           icon={<Clock size={24} />}
         />
         <StatCard
-          title="Alta Prioridade"
-          value={highPriority}
-          icon={<Bell size={24} />}
+          title="Lembretes Concluídos"
+          value={completedReminders}
+          icon={<Eye size={24} />}
         />
       </div>
 
       <section className="page-section">
         <div className="section-header">
           <h2>Todos os Lembretes</h2>
-          <Link to="/novo-lembrete" className="btn-primary">
+          <button onClick={() => setIsFormOpen(true)} className="btn-primary">
             <Plus size={18} />
             Novo Lembrete
-          </Link>
+          </button>
         </div>
 
         <div className="data-table">
           <div className="table-header">
+            <span>Cliente</span>
             <span>Título</span>
             <span>Descrição</span>
             <span>Vencimento</span>
-            <span>Prioridade</span>
             <span>Status</span>
           </div>
+
           {loading ? (
             <div className="loading">Carregando...</div>
+          ) : reminders.length === 0 ? (
+            <div className="empty-state">
+              <Bell size={48} />
+              <h3>Nenhum lembrete cadastrado</h3>
+              <p>Comece adicionando seu primeiro lembrete</p>
+            </div>
           ) : (
             reminders.map((reminder) => (
               <div key={reminder.id} className="table-row">
+                <span>
+                  {reminder.clients?.name || "Cliente não encontrado"}
+                </span>
                 <span>{reminder.title}</span>
-                <span>{reminder.description}</span>
-                <span>{new Date(reminder.due_date).toLocaleDateString()}</span>
-                <span className={`priority-badge ${reminder.priority}`}>
-                  {reminder.priority}
+                <span title={reminder.description}>
+                  {truncateDescription(reminder.description)}
+                </span>
+                <span>
+                  <Calendar size={14} className="inline-icon" />
+                  {new Date(reminder.due_date).toLocaleDateString("pt-BR")}
                 </span>
                 <span className={`status-badge ${reminder.status}`}>
-                  {reminder.status === "pending" ? "Pendente" : "Concluído"}
+                  {getStatusBadge(reminder.status)}
                 </span>
               </div>
             ))
           )}
         </div>
       </section>
+
+      <ReminderForm
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        onReminderAdded={handleReminderAdded}
+      />
     </div>
   );
 };
