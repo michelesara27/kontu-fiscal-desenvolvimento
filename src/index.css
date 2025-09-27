@@ -1429,3 +1429,25 @@ body {
     width: 100%;
   }
 }
+/* WEBHOOK */
+
+.webhook-status {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin: 16px 0;
+  font-size: 14px;
+  font-weight: 500;
+  border-left: 4px solid;
+}
+
+.webhook-status.success {
+  background-color: #f0f9ff;
+  color: #0369a1;
+  border-left-color: #0369a1;
+}
+
+.webhook-status.error {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-left-color: #dc2626;
+}
