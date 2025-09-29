@@ -21,8 +21,8 @@ const reminderSchema = z.object({
   description: z.string().optional(),
   due_date: z.string().min(1, "Data de vencimento é obrigatória"),
   client_email: z.string().optional(),
-  client_name: z.string().optional(), // ← NOVO CAMPO
-  company_name: z.string().optional(), // ← NOVO CAMPO
+  client_name: z.string().optional(),
+  company_name: z.string().optional(),
 });
 
 type ReminderFormData = z.infer<typeof reminderSchema>;
@@ -32,7 +32,7 @@ interface ReminderFormProps {
   onClose: () => void;
   onReminderAdded: (clientId?: string) => void;
   clients?: { id: string; name: string; email: string }[];
-  companyName?: string; // ← NOVA PROP
+  companyName?: string; // ← MANTIDO para uso no useEffect
 }
 
 const ReminderForm: React.FC<ReminderFormProps> = ({
@@ -40,12 +40,12 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
   onClose,
   onReminderAdded,
   clients = [],
-  companyName = "",
+  companyName = "", // ← MANTIDO
 }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = React.useState(false);
   const [selectedClientEmail, setSelectedClientEmail] = React.useState("");
-  const [selectedClientName, setSelectedClientName] = React.useState(""); // ← NOVO STATE
+  const [selectedClientName, setSelectedClientName] = React.useState("");
 
   const {
     register,
@@ -60,7 +60,7 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
       client_id: "",
       client_email: "",
       client_name: "",
-      company_name: companyName, // ← VALOR PADRÃO
+      company_name: companyName,
     },
   });
 
@@ -78,7 +78,7 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
       setSelectedClientName(clientName);
 
       setValue("client_email", clientEmail);
-      setValue("client_name", clientName); // ← SETANDO NOME DO CLIENTE
+      setValue("client_name", clientName);
     } else {
       setSelectedClientEmail("");
       setSelectedClientName("");
@@ -120,8 +120,8 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
         created_by: user.id,
         status: "pending",
         priority: "medium",
-        client_name: data.client_name || null, // ← NOVO CAMPO
-        company_name: data.company_name || null, // ← NOVO CAMPO
+        client_name: data.client_name || null,
+        company_name: data.company_name || null,
       };
 
       // Adicionar client_id apenas se foi selecionado

@@ -14,8 +14,8 @@ interface Reminder {
   status: "pending" | "completed";
   priority: "low" | "medium" | "high";
   client_id: string;
-  client_name: string; // ← NOVO CAMPO
-  company_name: string; // ← NOVO CAMPO
+  client_name: string;
+  company_name: string;
   clients?: {
     name: string;
   };
@@ -33,21 +33,13 @@ interface Company {
   trade_name: string;
 }
 
-// Função para enviar webhook (ATUALIZADA)
+// Função para enviar webhook (CORRIGIDA)
 const sendReminderWebhook = async (
   reminderData: any,
   user: any,
-  clients: any[],
-  clientEmail?: string,
-  companyName?: string
+  clientEmail?: string
 ) => {
   const webhookUrl = "https://kontu-lembretes.michelesara27.workers.dev/";
-
-  const clientName =
-    reminderData.client_name ||
-    (reminderData.client_id
-      ? clients.find((c) => c.id === reminderData.client_id)?.name
-      : null);
 
   const payload = {
     event_type: "reminder_created",
@@ -61,9 +53,9 @@ const sendReminderWebhook = async (
         status: reminderData.status,
         priority: reminderData.priority,
         client_id: reminderData.client_id,
-        client_name: reminderData.client_name, // ← NOVO CAMPO NO WEBHOOK
+        client_name: reminderData.client_name,
         client_email: clientEmail,
-        company_name: reminderData.company_name, // ← NOVO CAMPO NO WEBHOOK
+        company_name: reminderData.company_name,
         company_id: reminderData.company_id,
         created_by: reminderData.created_by,
         created_at: reminderData.created_at,
@@ -106,7 +98,7 @@ const Reminders: React.FC = () => {
   const { user } = useAuth();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [company, setCompany] = useState<Company | null>(null); // ← NOVO STATE
+  const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [webhookStatus, setWebhookStatus] = useState<{
@@ -154,7 +146,7 @@ const Reminders: React.FC = () => {
     }
   };
 
-  // NOVA FUNÇÃO: Buscar dados da empresa
+  // Buscar dados da empresa
   const fetchCompany = async () => {
     if (!user?.company_id) return;
 
@@ -175,7 +167,7 @@ const Reminders: React.FC = () => {
   useEffect(() => {
     fetchReminders();
     fetchClients();
-    fetchCompany(); // ← NOVA CHAMADA
+    fetchCompany();
   }, [user?.company_id]);
 
   const totalReminders = reminders.length;
@@ -191,6 +183,7 @@ const Reminders: React.FC = () => {
     return client?.email || "";
   };
 
+  // Excluir lembrete
   const handleDeleteReminder = async (reminderId: string) => {
     if (!confirm("Tem certeza que deseja excluir este lembrete?")) {
       return;
@@ -218,6 +211,7 @@ const Reminders: React.FC = () => {
     }
   };
 
+  // Marcar como concluído
   const handleToggleStatus = async (
     reminderId: string,
     currentStatus: string
@@ -272,13 +266,8 @@ const Reminders: React.FC = () => {
       if (newReminder) {
         setWebhookStatus({ type: null, message: "Enviando webhook..." });
 
-        sendReminderWebhook(
-          newReminder,
-          user,
-          clients,
-          clientEmail,
-          company?.trade_name
-        )
+        // CORREÇÃO: Removido clients do parâmetro
+        sendReminderWebhook(newReminder, user, clientEmail)
           .then((result) => {
             setWebhookStatus({
               type: result.success ? "success" : "error",
@@ -443,7 +432,7 @@ const Reminders: React.FC = () => {
         onClose={() => setIsFormOpen(false)}
         onReminderAdded={handleFormSuccess}
         clients={clients}
-        companyName={company?.trade_name || ""} // ← NOVA PROP
+        companyName={company?.trade_name || ""}
       />
     </div>
   );
