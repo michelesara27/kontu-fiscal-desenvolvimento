@@ -3,15 +3,26 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { X, Save, Calendar, User, FileText } from "lucide-react";
+import {
+  X,
+  Save,
+  Calendar,
+  User,
+  FileText,
+  Mail,
+  Building,
+} from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
 const reminderSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
-  client_id: z.string().optional(), // Tornando opcional para evitar erro
+  client_id: z.string().optional(),
   description: z.string().optional(),
   due_date: z.string().min(1, "Data de vencimento é obrigatória"),
+  client_email: z.string().optional(),
+  client_name: z.string().optional(), // ← NOVO CAMPO
+  company_name: z.string().optional(), // ← NOVO CAMPO
 });
 
 type ReminderFormData = z.infer<typeof reminderSchema>;
@@ -19,19 +30,22 @@ type ReminderFormData = z.infer<typeof reminderSchema>;
 interface ReminderFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onReminderAdded: () => void;
+  onReminderAdded: (clientId?: string) => void;
+  clients?: { id: string; name: string; email: string }[];
+  companyName?: string; // ← NOVA PROP
 }
 
 const ReminderForm: React.FC<ReminderFormProps> = ({
   isOpen,
   onClose,
   onReminderAdded,
+  clients = [],
+  companyName = "",
 }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = React.useState(false);
-  const [clients, setClients] = React.useState<{ id: string; name: string }[]>(
-    []
-  );
+  const [selectedClientEmail, setSelectedClientEmail] = React.useState("");
+  const [selectedClientName, setSelectedClientName] = React.useState(""); // ← NOVO STATE
 
   const {
     register,
@@ -39,40 +53,58 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
     formState: { errors },
     reset,
     setValue,
+    watch,
   } = useForm<ReminderFormData>({
     resolver: zodResolver(reminderSchema),
     defaultValues: {
-      client_id: "", // Valor padrão vazio
+      client_id: "",
+      client_email: "",
+      client_name: "",
+      company_name: companyName, // ← VALOR PADRÃO
     },
   });
 
-  React.useEffect(() => {
-    const fetchClients = async () => {
-      if (!user?.company_id || !isOpen) return;
-      try {
-        const { data, error } = await supabase
-          .from("clients")
-          .select("id, name")
-          .eq("company_id", user.company_id)
-          .eq("status", "active")
-          .order("name");
+  // Observar mudanças no select de cliente
+  const selectedClientId = watch("client_id");
 
-        if (error) throw error;
-        setClients(data || []);
-      } catch (error) {
-        console.error("Erro ao buscar clientes:", error);
-        alert("Erro ao carregar lista de clientes");
-      }
-    };
-    fetchClients();
-  }, [user?.company_id, isOpen]);
+  // Efeito para atualizar email e nome quando cliente for selecionado
+  React.useEffect(() => {
+    if (selectedClientId) {
+      const client = clients.find((c) => c.id === selectedClientId);
+      const clientEmail = client?.email || "";
+      const clientName = client?.name || "";
+
+      setSelectedClientEmail(clientEmail);
+      setSelectedClientName(clientName);
+
+      setValue("client_email", clientEmail);
+      setValue("client_name", clientName); // ← SETANDO NOME DO CLIENTE
+    } else {
+      setSelectedClientEmail("");
+      setSelectedClientName("");
+      setValue("client_email", "");
+      setValue("client_name", "");
+    }
+  }, [selectedClientId, clients, setValue]);
+
+  // Efeito para setar o nome da empresa
+  React.useEffect(() => {
+    if (companyName) {
+      setValue("company_name", companyName);
+    }
+  }, [companyName, setValue]);
 
   React.useEffect(() => {
     if (!isOpen) {
       reset();
-      setValue("client_id", ""); // Resetar para vazio ao fechar
+      setValue("client_id", "");
+      setValue("client_email", "");
+      setValue("client_name", "");
+      setValue("company_name", companyName);
+      setSelectedClientEmail("");
+      setSelectedClientName("");
     }
-  }, [isOpen, reset, setValue]);
+  }, [isOpen, reset, setValue, companyName]);
 
   const onSubmit = async (data: ReminderFormData) => {
     if (!user?.company_id) return;
@@ -88,6 +120,8 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
         created_by: user.id,
         status: "pending",
         priority: "medium",
+        client_name: data.client_name || null, // ← NOVO CAMPO
+        company_name: data.company_name || null, // ← NOVO CAMPO
       };
 
       // Adicionar client_id apenas se foi selecionado
@@ -105,21 +139,13 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
         throw error;
       }
 
-      onReminderAdded();
+      onReminderAdded(data.client_id);
       onClose();
       reset();
       alert("Lembrete criado com sucesso!");
     } catch (error: any) {
       console.error("Erro ao salvar lembrete:", error);
-
-      // Mensagem de erro mais amigável
-      let errorMessage = "Erro ao salvar lembrete";
-      if (error.message.includes("client_id")) {
-        errorMessage =
-          "Erro ao vincular cliente. Verifique se a coluna client_id existe na tabela reminders.";
-      }
-
-      alert(`${errorMessage}: ${error.message}`);
+      alert(`Erro ao criar lembrete: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -174,7 +200,7 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
               <option value="">Selecione um cliente (opcional)</option>
               {clients.map((client) => (
                 <option key={client.id} value={client.id}>
-                  {client.name}
+                  {client.name} {client.email ? `(${client.email})` : ""}
                 </option>
               ))}
             </select>
@@ -187,6 +213,53 @@ const ReminderForm: React.FC<ReminderFormProps> = ({
               </span>
             )}
           </div>
+
+          {/* Campos hidden para dados do cliente e empresa */}
+          <input
+            type="hidden"
+            {...register("client_email")}
+            value={selectedClientEmail}
+          />
+          <input
+            type="hidden"
+            {...register("client_name")}
+            value={selectedClientName}
+          />
+          <input
+            type="hidden"
+            {...register("company_name")}
+            value={companyName}
+          />
+
+          {/* Informações do cliente selecionado */}
+          {selectedClientName && (
+            <div className="client-info">
+              <div className="client-info-item">
+                <User size={16} />
+                <span>
+                  Cliente: <strong>{selectedClientName}</strong>
+                </span>
+              </div>
+              {selectedClientEmail && (
+                <div className="client-info-item">
+                  <Mail size={16} />
+                  <span>
+                    E-mail: <strong>{selectedClientEmail}</strong>
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Informação da empresa */}
+          {companyName && (
+            <div className="company-info">
+              <Building size={16} />
+              <span>
+                Empresa: <strong>{companyName}</strong>
+              </span>
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="description">

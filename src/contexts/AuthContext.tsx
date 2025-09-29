@@ -36,6 +36,7 @@ interface AuthContextType {
   validateResetToken: (
     token: string
   ) => Promise<{ error: any; isValid?: boolean; email?: string }>;
+  loginWithGoogle: () => Promise<{ error: any }>; // ← ADICIONADO
 }
 
 interface RegisterData {
@@ -102,6 +103,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error("Erro ao verificar conexão:", error);
       setIsConnected(false);
+    }
+  };
+
+  // ADICIONADO: Função loginWithGoogle
+  const loginWithGoogle = async (): Promise<{ error: any }> => {
+    try {
+      if (!isConnected) {
+        return { error: { message: "Sem conexão com o banco de dados" } };
+      }
+
+      // Implementação básica do Google Login
+      // Para uma implementação completa, você precisaria configurar OAuth no Supabase
+      console.log("Google Login solicitado - implementação em desenvolvimento");
+
+      // Simulação temporária - redireciona para login normal
+      return {
+        error: {
+          message: "Login com Google em desenvolvimento. Use login com email.",
+        },
+      };
+
+      // Implementação futura com OAuth:
+      // const { data, error } = await supabase.auth.signInWithOAuth({
+      //   provider: 'google',
+      // });
+
+      // if (error) throw error;
+
+      // return { error: null };
+    } catch (error: any) {
+      console.error("Erro no login com Google:", error);
+      return {
+        error: { message: error.message || "Erro no login com Google" },
+      };
     }
   };
 
@@ -182,10 +217,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (!invitation.is_valid) {
           return { error: { message: "Convite inválido ou expirado" } };
         }
-
-        //if (invitation.invitation_email !== userData.email) {
-        //  return { error: { message: "Email não corresponde ao convite" } };
-        //}
 
         // Marcar convite como usado
         await supabase
@@ -537,6 +568,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem("user");
   };
 
+  // ATUALIZADO: Incluir loginWithGoogle no value
   const value = {
     user,
     isAuthenticated: !!user,
@@ -548,6 +580,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     requestPasswordReset,
     resetPassword,
     validateResetToken,
+    loginWithGoogle, // ← ADICIONADO
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

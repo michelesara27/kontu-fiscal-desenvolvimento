@@ -3,11 +3,18 @@ import React from "react";
 import { useAuth } from "../contexts/AuthContext";
 
 const GoogleLoginButton: React.FC = () => {
-  const { loginWithGoogle } = useAuth();
+  const { loginWithGoogle } = useAuth(); // ← AGORA FUNCIONA
+
+  const handleGoogleLogin = async () => {
+    const { error } = await loginWithGoogle();
+    if (error) {
+      alert(error.message);
+    }
+  };
 
   return (
     <button
-      onClick={loginWithGoogle}
+      onClick={handleGoogleLogin}
       className="google-login-btn"
       style={{
         display: "flex",

@@ -1451,3 +1451,145 @@ body {
   color: #dc2626;
   border-left-color: #dc2626;
 }
+
+/* Estilo para a informação do email do cliente */
+.client-email-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  margin: 10px 0;
+  font-size: 14px;
+  color: #475569;
+}
+
+.client-email-info svg {
+  color: #64748b;
+}
+
+/* Estilos para as ações na tabela */
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background-color: #f1f5f9;
+}
+
+.icon-btn.danger {
+  color: #dc2626;
+}
+
+.icon-btn.danger:hover {
+  background-color: #fef2f2;
+}
+
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Status badge clicável */
+.status-badge.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-badge.clickable:hover {
+  transform: scale(1.05);
+  opacity: 0.9;
+}
+
+/* Loading spinner pequeno */
+.loading-spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f3f4f6;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Ajustes na tabela para a nova coluna */
+.table-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr auto auto; /* ← Atualizado para 6 colunas */
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  align-items: center;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr auto auto; /* ← Atualizado para 6 colunas */
+  gap: 16px;
+  padding: 12px 16px;
+  font-weight: 600;
+  border-bottom: 2px solid #e5e7eb;
+  background-color: #f8fafc;
+}
+/* Estilos para informações do cliente e empresa */
+.client-info {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 10px 0;
+}
+
+.client-info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.client-info-item:last-child {
+  margin-bottom: 0;
+}
+
+.company-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  margin: 10px 0;
+  font-size: 14px;
+  color: #0369a1;
+}
+
+.company-info svg {
+  color: #0284c7;
+}
